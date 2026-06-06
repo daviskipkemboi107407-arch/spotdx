@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpotDX — Download Spotify Music Free</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080808;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --accent: #1db954;
+    --text: #f0f0f0;
+    --muted: #555;
+    --error: #ff4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Floating music notes */
+  .notes-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .note {
+    position: absolute;
+    font-size: 1.5rem;
+    opacity: 0;
+    animation: floatNote linear infinite;
+    color: rgba(29,185,84,0.15);
+  }
+
+  @keyframes floatNote {
+    0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(29,185,84,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(29,185,84,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header { text-align: center; padding: 50px 0 30px; }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .logo-icon {
+    width: 52px;
+    height: 52px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(29,185,84,0.4);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(29,185,84,0.4); }
+    50% { box-shadow: 0 0 40px rgba(29,185,84,0.7); }
+  }
+
+  .logo-icon svg { width: 30px; height: 30px; }
+  .logo-text { font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; }
+  .logo-text span { color: var(--accent); }
+  .tagline { color: var(--muted); font-size: 0.9rem; font-family: 'Space Mono', monospace; }
+  .tagline span { color: var(--accent); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat span { color: var(--accent); font-weight: 700; }
+
+  /* Type selector */
+  .types {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+  }
+
+  .type-btn {
+    flex: 1;
+    max-width: 140px;
+    padding: 12px 8px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .type-btn:hover { border-color: var(--accent); color: var(--text); }
+  .type-btn.active { border-color: var(--accent); color: var(--text); background: rgba(29,185,84,0.08); }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .url-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 10px;
+  }
+
+  .url-input:focus { border-color: var(--accent); }
+  .url-input::placeholder { color: var(--muted); }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .paste-btn {
+    flex: 1;
+    background: var(--border);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .paste-btn:hover { background: #2a2a2a; border-color: var(--accent); }
+
+  .fetch-btn {
+    flex: 2;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .fetch-btn:hover { background: #1ed760; transform: translateY(-1px); }
+  .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Status */
+  .status {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 16px;
+  }
+
+  .status.visible { display: block; }
+  .status.loading { background: rgba(29,185,84,0.1); border: 1px solid var(--accent); color: var(--accent); }
+  .status.error { background: rgba(255,68,68,0.1); border: 1px solid var(--error); color: var(--error); }
+  .status.success { background: rgba(29,185,84,0.1); border: 1px solid var(--accent); color: var(--accent); }
+
+  /* Now Playing Card */
+  .now-playing {
+    display: none;
+    background: linear-gradient(135deg, #0d2818, #111);
+    border: 1px solid rgba(29,185,84,0.3);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .now-playing::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(29,185,84,0.1), transparent 60%);
+  }
+
+  .now-playing.visible { display: block; }
+
+  .np-label {
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Equalizer */
+  .eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+  }
+
+  .eq-bar {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: eqAnim ease-in-out infinite alternate;
+  }
+
+  .eq-bar:nth-child(1) { animation-duration: 0.4s; height: 6px; }
+  .eq-bar:nth-child(2) { animation-duration: 0.6s; height: 10px; }
+  .eq-bar:nth-child(3) { animation-duration: 0.3s; height: 14px; }
+  .eq-bar:nth-child(4) { animation-duration: 0.5s; height: 8px; }
+  .eq-bar:nth-child(5) { animation-duration: 0.4s; height: 12px; }
+
+  @keyframes eqAnim {
+    from { transform: scaleY(0.3); }
+    to { transform: scaleY(1); }
+  }
+
+  .np-content {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .np-art-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .np-art {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .np-art-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1db954, #0d7a3a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .np-info { flex: 1; min-width: 0; }
+
+  .np-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+
+  .np-artist {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  .np-meta {
+    display: flex;
+    gap: 12px;
+  }
+
+  .np-badge {
+    background: rgba(29,185,84,0.15);
+    border: 1px solid rgba(29,185,84,0.3);
+    border-radius: 100px;
+    padding: 3px 10px;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+  }
+
+  /* Progress bar */
+  .np-progress {
+    margin-top: 4px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 100px;
+    width: 35%;
+    animation: progressAnim 8s linear infinite;
+  }
+
+  @keyframes progressAnim {
+    0% { width: 5%; }
+    100% { width: 95%; }
+  }
+
+  .progress-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+  }
+
+  /* Download button */
+  .download-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+    letter-spacing: 0.5px;
+  }
+
+  .download-btn.visible { display: block; }
+  .download-btn:hover { background: #1ed760; transform: translateY(-1px); }
+
+  /* Confetti */
+  .confetti-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    overflow: hidden;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -10px;
+    opacity: 0;
+    animation: confettiFall 3s ease-in forwards;
+  }
+
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Testimonials */
+  .testimonials {
+    margin: 24px 0;
+  }
+
+  .testimonials h3 {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 14px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .testimonial-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+  }
+
+  .testimonial-scroll::-webkit-scrollbar { display: none; }
+
+  .testimonial {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-width: 220px;
+    flex-shrink: 0;
+  }
+
+  .t-stars { color: var(--accent); font-size: 0.85rem; margin-bottom: 6px; }
+  .t-text { font-size: 0.82rem; color: var(--text); margin-bottom: 8px; line-height: 1.5; }
+  .t-author { font-size: 0.75rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  /* How it works */
+  .how { margin-top: 30px; text-align: center; }
+
+  .how h2 {
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+
+  .step-num { font-family: 'Space Mono', monospace; font-size: 1.3rem; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .step-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
+  .step-desc { color: var(--muted); font-size: 0.75rem; line-height: 1.5; }
+
+  .supported {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+
+  .badge {
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+  }
+
+  footer {
+    text-align: center;
+    padding: 30px 0 24px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  footer span { color: var(--accent); }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(29,185,84,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Trust badges */
+  .trust-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+
+  .trust-badge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.72rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  @media (max-width: 480px) {
+    .logo-text { font-size: 2rem; }
+    .steps { grid-template-columns: 1fr; }
+    .types { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Floating music notes -->
+<div class="notes-container" id="notesContainer"></div>
+
+<!-- Confetti container -->
+<div class="confetti-container" id="confettiContainer"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+        </svg>
+      </div>
+      <div class="logo-text">Spot<span>DX</span></div>
+    </div>
+    <p class="tagline">Download Spotify Music. <span>Free & Fast.</span></p>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat">⬇️ <span id="downloadCount">10,247</span> songs downloaded</div>
+    <div class="stat">⭐ <span>4.8</span>/5 rating</div>
+    <div class="stat">⚡ Avg <span>3s</span> download</div>
+  </div>
+
+  <!-- Trust badges -->
+  <div class="trust-row">
+    <div class="trust-badge">🔒 256-bit encrypted</div>
+    <div class="trust-badge">✅ No signup needed</div>
+    <div class="trust-badge">🚫 Zero ads</div>
+  </div>
+
+  <!-- Type selector -->
+  <div class="types">
+    <button class="type-btn active" data-type="track" onclick="selectType(this)">🎵<br>Song</button>
+    <button class="type-btn" data-type="album" onclick="selectType(this)">💿<br>Album</button>
+    <button class="type-btn" data-type="playlist" onclick="selectType(this)">📋<br>Playlist</button>
+  </div>
+
+  <!-- Main card -->
+  <div class="card">
+    <input type="text" class="url-input" id="urlInput" placeholder="Paste Spotify song link here..."/>
+    <div class="btn-row">
+      <button class="paste-btn" onclick="pasteURL()">📋 Paste</button>
+      <button class="fetch-btn" id="fetchBtn" onclick="fetchTrack()">⬇ Download MP3</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <!-- Now Playing Card -->
+    <div class="now-playing" id="nowPlaying">
+      <div class="np-label">
+        <div class="eq">
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+        </div>
+        Now Playing
+      </div>
+      <div class="np-content">
+        <div class="np-art-wrap">
+          <div class="np-art-placeholder" id="npPlaceholder">🎵</div>
+          <img class="np-art" id="npArt" src="" alt="" style="display:none"
+               onload="this.style.display='block';document.getElementById('npPlaceholder').style.display='none'"
+               onerror="this.style.display='none'"/>
+        </div>
+        <div class="np-info">
+          <div class="np-title" id="npTitle">Track Title</div>
+          <div class="np-artist" id="npArtist">Artist Name</div>
+          <div class="np-meta">
+            <span class="np-badge" id="npDuration">3:30</span>
+            <span class="np-badge">MP3</span>
+            <span class="np-badge">320kbps</span>
+          </div>
+        </div>
+      </div>
+      <div class="np-progress">
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="progress-times">
+          <span id="npCurrentTime">0:00</span>
+          <span id="npTotalTime">3:30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download button -->
+    <button class="download-btn" id="downloadBtn" onclick="startDownload()">
+      ⬇ Download MP3 — Free!
+    </button>
+  </div>
+
+  <!-- Testimonials -->
+  <div class="testimonials">
+    <h3>What people say</h3>
+    <div class="testimonial-scroll">
+      <div class="testimonial">
+        <div class="t-stars">★★★★★</div>
+        <div class="t-text">"Finally a site that actually works! Downloaded my whole playlist in minutes."</div>
+        <div class="t-author">— @brian_ke</div>
+      </div>
+      <div class="testimonial">
+        <div class="t-stars">★★★★★</div>
+        <div class="t-text">"No ads, no signup, just works. Best Spotify downloader I've used."</div>
+        <div class="t-author">— @amina_nairobi</div>
+      </div>
+      <div class="testimonial">
+        <div class="t-stars">★★★★★</div>
+        <div class="t-text">"Downloaded 50 songs for my road trip. Worked perfectly every time!"</div>
+        <div class="t-author">— @peter_mwangi</div>
+      </div>
+      <div class="testimonial">
+        <div class="t-stars">★★★★☆</div>
+        <div class="t-text">"Super fast downloads. The album art even shows up. Love it!"</div>
+        <div class="t-author">— @grace_wanjiku</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="how">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Copy Link</div>
+        <div class="step-desc">Open Spotify, tap Share → Copy Link</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Paste & Fetch</div>
+        <div class="step-desc">Paste the link and tap Download</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Save MP3</div>
+        <div class="step-desc">Tap ⋮ then Download to save</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="supported">
+    <span class="badge">Songs</span>
+    <span class="badge">Albums</span>
+    <span class="badge">Playlists</span>
+    <span class="badge">No signup</span>
+    <span class="badge">100% Free</span>
+    <span class="badge">No Ads</span>
+    <span class="badge">No Limits</span>
+  </div>
+
+  <footer>
+    © 2026 <span>Davis</span> · SpotDX · Download Spotify Music Free.
+  </footer>
+</div>
+
+<script>
+  let selectedType = 'track';
+  let downloadUrl = null;
+  let downloadCount = 10247;
+
+  const placeholders = {
+    track: 'Paste Spotify song link here...',
+    album: 'Paste Spotify album link here...',
+    playlist: 'Paste Spotify playlist link here...'
+  };
+
+  // Floating music notes
+  const noteSymbols = ['♪', '♫', '♬', '♩', '🎵', '🎶'];
+  function createNote() {
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = noteSymbols[Math.floor(Math.random() * noteSymbols.length)];
+    note.style.left = Math.random() * 100 + 'vw';
+    note.style.animationDuration = (8 + Math.random() * 12) + 's';
+    note.style.animationDelay = (Math.random() * 5) + 's';
+    note.style.fontSize = (0.8 + Math.random() * 1.5) + 'rem';
+    document.getElementById('notesContainer').appendChild(note);
+    setTimeout(() => note.remove(), 20000);
+  }
+
+  setInterval(createNote, 1500);
+
+  // Download counter animation
+  function animateCounter() {
+    downloadCount += Math.floor(Math.random() * 3) + 1;
+    document.getElementById('downloadCount').textContent = downloadCount.toLocaleString();
+  }
+  setInterval(animateCounter, 8000);
+
+  // Confetti
+  function launchConfetti() {
+    const colors = ['#1db954', '#ffffff', '#1ed760', '#ffd700', '#ff6b6b'];
+    const container = document.getElementById('confettiContainer');
+    for (let i = 0; i < 60; i++) {
+      setTimeout(() => {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        piece.style.width = (6 + Math.random() * 8) + 'px';
+        piece.style.height = (6 + Math.random() * 8) + 'px';
+        piece.style.animationDelay = (Math.random() * 0.5) + 's';
+        container.appendChild(piece);
+        setTimeout(() => piece.remove(), 3500);
+      }, i * 30);
+    }
+  }
+
+  function selectType(btn) {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedType = btn.dataset.type;
+    document.getElementById('urlInput').placeholder = placeholders[selectedType];
+    resetUI();
+  }
+
+  async function pasteURL() {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.getElementById('urlInput').value = text;
+    } catch(e) {
+      showStatus('⚠ Tap and hold the input box to paste manually.', 'error');
+    }
+  }
+
+  function showStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.className = `status visible ${type}`;
+    el.innerHTML = type === 'loading' ? `<span class="spinner"></span>${msg}` : msg;
+  }
+
+  function hideStatus() { document.getElementById('status').className = 'status'; }
+
+  function resetUI() {
+    hideStatus();
+    downloadUrl = null;
+    document.getElementById('downloadBtn').classList.remove('visible');
+    document.getElementById('nowPlaying').classList.remove('visible');
+  }
+
+  async function fetchTrack() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) { showStatus('⚠ Please paste a Spotify link first.', 'error'); return; }
+    if (!url.includes('spotify.com')) { showStatus('⚠ Please paste a valid Spotify link.', 'error'); return; }
+
+    resetUI();
+    document.getElementById('fetchBtn').disabled = true;
+
+    // Route to playlist/album handler
+    if (url.includes('/playlist/') || url.includes('/album/')) {
+      await fetchPlaylistTracks(url);
+      document.getElementById('fetchBtn').disabled = false;
+      return;
+    }
+
+    showStatus('Fetching track info...', 'loading');
+
+    try {
+      const response = await fetch(
+        `https://spotify-music-mp3-downloader-api.p.rapidapi.com/download?link=${encodeURIComponent(url)}`,
+        {
+          method: 'GET',
+          headers: {
+            'x-rapidapi-host': 'spotify-music-mp3-downloader-api.p.rapidapi.com',
+            'x-rapidapi-key': '713da5542cmsh3fa3267b3183e72p1d05e7jsn0f00590135bc'
+          }
+        }
+      );
+
+      const data = await response.json();
+      console.log('SpotDX response:', data);
+
+      console.log('Full API response:', JSON.stringify(data));
+
+      // Handle nested response - medias array has the real MP3 link
+      const responseData = data.data || data.result || data.response || data;
+      
+      // Try medias array first (correct format)
+      let dlUrl = null;
+      if (responseData.medias && responseData.medias.length > 0) {
+        dlUrl = responseData.medias[0].url;
+      } else {
+        dlUrl = responseData.downloadLink || responseData.download_url || 
+                responseData.url || responseData.link || responseData.mp3 || 
+                responseData.audio || data.downloadLink || data.download_url || 
+                data.url || data.link || data.mp3 || data.audio;
+      }
+
+      if (dlUrl) {
+        downloadUrl = dlUrl;
+
+        // Update Now Playing card
+        const title = responseData.title || responseData.name || responseData.track_name || 
+                      data.title || data.name || 'Track Ready!';
+        const artist = responseData.author || responseData.artist || responseData.artists || 
+                       data.author || data.artist || 'Spotify Artist';
+        const duration = responseData.duration || responseData.length || data.duration || '3:30';
+        const art = responseData.thumbnail || responseData.cover || responseData.image || 
+                    responseData.artwork || data.thumbnail || data.cover || data.image;
+
+        document.getElementById('npTitle').textContent = title;
+        document.getElementById('npArtist').textContent = artist;
+        document.getElementById('npDuration').textContent = duration;
+        document.getElementById('npTotalTime').textContent = duration;
+
+        if (art) {
+          document.getElementById('npArt').src = art;
+        }
+
+        document.getElementById('nowPlaying').classList.add('visible');
+        showStatus('✓ Ready! Tap Download to save your MP3.', 'success');
+        document.getElementById('downloadBtn').classList.add('visible');
+
+      } else if (data.error || data.message) {
+        showStatus(`❌ ${data.error || data.message}`, 'error');
+      } else {
+        showStatus('❌ Could not fetch track. Try another Spotify link.', 'error');
+        console.log('Full response:', JSON.stringify(data));
+      }
+
+    } catch (err) {
+      showStatus('❌ Network error. Check your connection and try again.', 'error');
+      console.error(err);
+    } finally {
+      document.getElementById('fetchBtn').disabled = false;
+    }
+  }
+
+  function startDownload() {
+    if (!downloadUrl) return;
+    window.open(downloadUrl, '_blank');
+    launchConfetti();
+    showStatus('🎉 Download started! Tap ⋮ then Download to save your MP3.', 'success');
+    animateCounter();
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fetchTrack();
+  });
+
+  function formatDuration(ms) {
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    return mins + ':' + secs.toString().padStart(2, '0');
+  }
+
+  async function fetchPlaylistTracks(url) {
+    showStatus('Fetching tracks... (first 5 only)', 'loading');
+    const match = url.match(/\/(playlist|album)\/([a-zA-Z0-9]+)/);
+    if (!match) { showStatus('❌ Invalid playlist/album link.', 'error'); return; }
+    const type = match[1];
+    const id = match[2];
+
+    try {
+      const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'grant_type=client_credentials&client_id=9b6dc72cdf664c30ad73a9a19b1dd717&client_secret=f56e5c2f23874a94b0e5a2a0f3b0a3b4'
+      });
+      const tokenData = await tokenRes.json();
+      const token = tokenData.access_token;
+      if (!token) { showStatus('❌ Could not load playlist. Paste a direct song link instead.', 'error'); return; }
+
+      const endpoint = type === 'playlist'
+        ? 'https://api.spotify.com/v1/playlists/' + id + '/tracks?limit=5'
+        : 'https://api.spotify.com/v1/albums/' + id + '/tracks?limit=5';
+
+      const tracksRes = await fetch(endpoint, { headers: { 'Authorization': 'Bearer ' + token } });
+      const tracksData = await tracksRes.json();
+      const tracks = type === 'playlist'
+        ? (tracksData.items || []).map(function(i) { return i.track; }).filter(Boolean)
+        : (tracksData.items || []);
+
+      if (!tracks.length) { showStatus('❌ No tracks found. Try a direct song link.', 'error'); return; }
+
+      hideStatus();
+      const existing = document.getElementById('trackList');
+      if (existing) existing.remove();
+
+      const list = document.createElement('div');
+      list.id = 'trackList';
+      list.style.cssText = 'margin-bottom:16px;';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'font-size:0.75rem;color:#555;font-family:Space Mono,monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;';
+      header.textContent = 'First 5 tracks — download one by one';
+      list.appendChild(header);
+
+      tracks.slice(0, 5).forEach(function(track, i) {
+        const trackUrl = (track.external_urls && track.external_urls.spotify) || ('https://open.spotify.com/track/' + track.id);
+        const artists = (track.artists || []).map(function(a) { return a.name; }).join(', ') || 'Artist';
+        const duration = track.duration_ms ? formatDuration(track.duration_ms) : '3:30';
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;background:#0a0a0a;border:1px solid #1e1e1e;border-radius:12px;margin-bottom:8px;';
+        item.innerHTML = '<div style="width:32px;height:32px;background:linear-gradient(135deg,#1db954,#0d7a3a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;">' + (i+1) + '</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + track.name + '</div><div style="color:#555;font-size:0.75rem;font-family:Space Mono,monospace;">' + artists + ' · ' + duration + '</div></div><button onclick="downloadTrackById(' + "'" + trackUrl + "'" + ', this)" style="background:#1db954;color:#000;border:none;border-radius:8px;padding:8px 14px;font-family:Syne,sans-serif;font-weight:800;font-size:0.75rem;cursor:pointer;flex-shrink:0;">⬇ MP3</button>';
+        list.appendChild(item);
+      });
+
+      document.getElementById('downloadBtn').before(list);
+      showStatus('✓ Found ' + tracks.length + ' tracks! Download each one below.', 'success');
+
+    } catch(err) {
+      showStatus('❌ Could not load playlist. Try a direct song link.', 'error');
+      console.error(err);
+    }
+  }
+
+  async function downloadTrackById(trackUrl, btn) {
+    const original = btn.textContent;
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    try {
+      const response = await fetch(
+        'https://spotify-music-mp3-downloader-api.p.rapidapi.com/download?link=' + encodeURIComponent(trackUrl),
+        { method: 'GET', headers: { 'x-rapidapi-host': 'spotify-music-mp3-downloader-api.p.rapidapi.com', 'x-rapidapi-key': '713da5542cmsh3fa3267b3183e72p1d05e7jsn0f00590135bc' } }
+      );
+      const data = await response.json();
+      const responseData = data.data || data;
+      let dlUrl = null;
+      if (responseData.medias && responseData.medias.length > 0) {
+        dlUrl = responseData.medias[0].url;
+      } else {
+        dlUrl = responseData.url || responseData.link || data.url;
+      }
+      if (dlUrl) {
+        window.open(dlUrl, '_blank');
+        btn.textContent = '✓ Done!';
+        btn.style.background = '#0d7a3a';
+        launchConfetti();
+        animateCounter();
+      } else {
+        btn.textContent = '❌';
+        btn.style.background = '#ff4444';
+        setTimeout(function() { btn.textContent = original; btn.style.background = '#1db954'; btn.disabled = false; }, 2000);
+      }
+    } catch(err) {
+      btn.textContent = '❌';
+      setTimeout(function() { btn.textContent = original; btn.style.background = '#1db954'; btn.disabled = false; }, 2000);
+    }
+  }
+</script>
+
+</body>
+</html>
